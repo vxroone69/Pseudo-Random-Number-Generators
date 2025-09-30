@@ -3,6 +3,10 @@
 ## Overview
 This project implements and compares different Pseudo-Random Number Generators (PRNGs) based on their statistical and performance characteristics. The tool evaluates key metrics such as mean, standard deviation, chi-square, and entropy. The comparison helps in identifying which PRNGs are more suitable for simulations, cryptography, and other applications where randomness quality is crucial.
 
+<p align="center">
+  <img src="outputs.png" alt="PRNG Comparison Results" width="600">
+</p>
+
 ## Features
 - Modular implementation of PRNGs in Python.
 - Performance testing using execution time.
@@ -25,5 +29,4 @@ Install dependencies with:
 ```bash
 pip install numpy scipy matplotlib
 
-![Alt text](images/output.png)
 
