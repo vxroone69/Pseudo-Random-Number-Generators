@@ -29,6 +29,10 @@ This project implements and compares different Pseudo-Random Number Generators (
 - **Chi-Square Test:** Should be close to expected value (k–1, 255-1)
 - **Entropy:** Higher entropy = better randomness.
 
+<p align="center">
+  <img src="expected.png" alt="PRNG Comparison Results" width="600">
+</p>
+
 ## Requirements
 - Python 3.8+
 - Libraries: `numpy`, `scipy`, `time`, `matplotlib`
