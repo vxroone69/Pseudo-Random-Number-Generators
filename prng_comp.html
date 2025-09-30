@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRNG Comparison: LFSR vs Modified Blum Blum Shub</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .control-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .algorithm-params {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 25px;
+        }
+
+        .param-group {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+
+        .param-group h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .input-group input, select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .generate-controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #545b62;
+            transform: translateY(-2px);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .result-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .result-panel h3 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            text-align: center;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .sequence-display {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 2px solid #333;
+        }
+
+        .stats-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .stats-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .stat-value {
+            color: #667eea;
+            font-weight: 700;
+        }
+
+        .analysis-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        @media (max-width: 1200px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .algorithm-params {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>PRNG Comparison Tool</h1>
+        <p>Linear Feedback Shift Register vs Modified Blum Blum Shub</p>
+    </div>
+
+    <div class="container">
+        <div class="control-panel">
+            <div class="algorithm-params">
+                <div class="param-group">
+                    <h3>🔄 LFSR Parameters</h3>
+                    <div class="input-group">
+                        <label for="lfsr-length">Register Length (bits):</label>
+                        <select id="lfsr-length">
+                            <option value="8">8-bit</option>
+                            <option value="16" selected>16-bit</option>
+                            <option value="32">32-bit</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="lfsr-seed">Seed Value (Initial Register):</label>
+                        <input type="number" id="lfsr-seed" value="12345" min="1">
+                    </div>
+                    <div class="input-group">
+                        <label for="lfsr-taps">Tap Positions (comma-separated, LSB=1):</label>
+                        <input type="text" id="lfsr-taps" value="16,14,13,11" placeholder="e.g., 16,14,13,11">
+                    </div>
+                </div>
+
+                <div class="param-group">
+                    <h3>🔐 Modified BBS Parameters</h3>
+                    <div class="input-group">
+                        <label for="bbs-bits">Prime Bits (Controls modulus size):</label>
+                        <select id="bbs-bits">
+                            <option value="8">8-bit</option>
+                            <option value="16" selected>16-bit</option>
+                            <option value="24">24-bit</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="bbs-seed">Seed Value ($x_0$):</label>
+                        <input type="number" id="bbs-seed" value="12345" min="2">
+                    </div>
+                    <div class="input-group">
+                        <label for="bbs-info">Algorithm Details:</label>
+                        <input type="text" readonly value="3x3 Matrix, output 8-bit bytes" style="background: #e9ecef;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="generate-controls">
+                <div class="input-group" style="margin-bottom: 0; margin-right: 20px;">
+                    <label for="sample-size">Sample Size (Bytes):</label>
+                    <select id="sample-size">
+                        <option value="100">100</option>
+                        <option value="1000" selected>1,000</option>
+                        <option value="5000">5,000</option>
+                        <option value="10000">10,000</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="generateComparison()">🚀 Generate & Compare</button>
+                <button class="btn-secondary" onclick="clearResults()">🗑️ Clear</button>
+                <button class="btn-secondary" onclick="exportResults()">💾 Export</button>
+            </div>
+
+            <div class="progress-bar" id="progress-bar" style="display: none;">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="results-grid" id="results-grid" style="display: none;">
+            <div class="result-panel">
+                <h3>LFSR Output</h3>
+                <div class="sequence-display" id="lfsr-output"></div>
+                <div class="stats-display" id="lfsr-stats"></div>
+            </div>
+
+            <div class="result-panel">
+                <h3>Modified BBS Output</h3>
+                <div class="sequence-display" id="bbs-output"></div>
+                <div class="stats-display" id="bbs-stats"></div>
+            </div>
+        </div>
+
+        <div class="analysis-section" id="analysis-section" style="display: none;">
+            <h3 style="text-align: center; color: #667eea; margin-bottom: 20px;">Statistical Analysis</h3>
+            <table style="width: 100%; border-collapse: collapse;" id="stats-table">
+                <thead>
+                    <tr style="background: #667eea; color: white;">
+                        <th style="padding: 12px; text-align: left;">Metric</th>
+                        <th style="padding: 12px; text-align: left;">LFSR</th>
+                        <th style="padding: 12px; text-align: left;">Modified BBS</th>
+                        <th style="padding: 12px; text-align: left;">Better</th>
+                    </tr>
+                </thead>
+                <tbody id="stats-table-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let lfsrSequence = [];
+        let bbsSequence = [];
+        let lfsrStats = {};
+        let bbsStats = {};
+        let myChart = null; // Variable for the chart instance
+
+        // Utility for sleep
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // LFSR Implementation
+        class LFSR {
+            constructor(length, seed, taps) {
+                this.length = length;
+                this.register = seed;
+                this.taps = taps.map(t => t - 1).filter(t => t >= 0 && t < length);
+                this.mask = (1 << length) - 1;
+                if (this.register === 0) this.register = 1;
+
+                // Ensure taps array is not empty and contains valid positions
+                if (this.taps.length === 0) {
+                    // Default taps for a common primitive polynomial
+                    if (length === 16) this.taps = [15, 13, 12, 10].map(t => t - 1); 
+                    else if (length === 8) this.taps = [7, 5, 4, 3].map(t => t - 1); 
+                    else if (length === 32) this.taps = [31, 28, 27, 26].map(t => t - 1); 
+                    // Note: Default LFSR taps can lead to short cycles if not primitive.
+                }
+            }
+
+            next() {
+                let feedback = 0;
+                // Use taps to calculate feedback (XOR sum of bits at tap positions)
+                for (let tap of this.taps) {
+                    feedback ^= (this.register >> (this.length - 1 - tap)) & 1; 
+                }
+                
+                // Galois LFSR shift (shift left, feedback into LSB)
+                // The original code was more of an external-XOR configuration, adjusting to common Galois:
+                const outputBit = this.register & 1; // Output is the LSB
+                this.register = (this.register >> 1) | (feedback << (this.length - 1));
+                this.register &= this.mask;
+
+                // Return the LSB of the register for 8-bit output
+                return this.register & 0xFF;
+            }
+
+            generateSequence(length) {
+                const sequence = [];
+                for (let i = 0; i < length; i++) {
+                    const value = this.next();
+                    const binary = value.toString(2).padStart(8, '0');
+                    sequence.push({
+                        decimal: value,
+                        binary: binary,
+                        hex: '0x' + value.toString(16).toUpperCase().padStart(2, '0')
+                    });
+                }
+                return sequence;
+            }
+        }
+
+        // Modified BBS Implementation
+        class ModifiedBBS3x3 {
+            constructor(bits = 16, seed = null) {
+                console.log('Initializing Modified BBS with', bits, 'bits, seed:', seed);
+                
+                // Find two distinct Blum primes
+                // The maxAttempts limit prevents the browser from hanging
+                this.p = this.generateBlumPrime(bits, 5000);
+                this.q = this.generateBlumPrime(bits, 5000);
+                let attempts = 0;
+                while (this.q === this.p && attempts < 5) {
+                    this.q = this.generateBlumPrime(bits, 5000);
+                    attempts++;
+                }
+                if (this.q === this.p) {
+                    throw new Error("Failed to find two distinct Blum primes. Try a different bit length or lower sample size.");
+                }
+                
+                this.n = BigInt(this.p) * BigInt(this.q);
+
+                if (seed === null || seed <= 1) {
+                    seed = Math.floor(Math.random() * 1000000) + 1000;
+                }
+                
+                this.seed = BigInt(seed);
+
+                // Ensure seed is co-prime to n (simple check)
+                while ((this.seed % BigInt(this.p) === BigInt(0) || this.seed % BigInt(this.q) === BigInt(0)) || this.seed < BigInt(2)) {
+                    this.seed = BigInt(Math.floor(Math.random() * 1000000) + 1000);
+                }
+
+                // Initialize 3x3 matrix
+                this.M = [
+                    [this.seed, BigInt(1), BigInt(2)],
+                    [BigInt(3), this.seed, BigInt(4)],
+                    [BigInt(5), BigInt(6), this.seed]
+                ];
+
+                console.log('BBS initialized: p =', this.p, ', q =', this.q, ', n =', this.n.toString());
+            }
+
+            generateBlumPrime(bits, maxAttempts = 1000) {
+                const min = BigInt(1) << BigInt(bits - 1);
+                const max = (BigInt(1) << BigInt(bits)) - BigInt(1);
+                let candidate = BigInt(Math.floor(Math.random() * Number(max - min)) + Number(min));
+                if (candidate % BigInt(2) === BigInt(0)) candidate++;
+                
+                for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                    if (this.isPrime(candidate) && candidate % BigInt(4) === BigInt(3)) {
+                        return Number(candidate);
+                    }
+                    candidate += BigInt(2);
+                    if (candidate > max) candidate = min;
+                }
+                throw new Error(`Could not find a ${bits}-bit Blum Prime (3 mod 4) after ${maxAttempts} attempts.`);
+            }
+
+            isPrime(n) {
+                if (n <= BigInt(1)) return false;
+                if (n <= BigInt(3)) return true;
+                if (n % BigInt(2) === BigInt(0) || n % BigInt(3) === BigInt(0)) return false;
+                
+                for (let i = BigInt(5); i * i <= n; i += BigInt(6)) {
+                    if (n % i === BigInt(0) || n % (i + BigInt(2)) === BigInt(0)) return false;
+                }
+                return true;
+            }
+
+            matrixMultiply(A, B) {
+                const result = [
+                    [BigInt(0), BigInt(0), BigInt(0)],
+                    [BigInt(0), BigInt(0), BigInt(0)],
+                    [BigInt(0), BigInt(0), BigInt(0)]
+                ];
+
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j < 3; j++) {
+                        for (let k = 0; k < 3; k++) {
+                            result[i][j] = (result[i][j] + A[i][k] * B[k][j]) % this.n;
+                        }
+                    }
+                }
+                return result;
+            }
+
+            next() {
+                // Square the matrix modulo n (M_i+1 = M_i^2 mod n)
+                this.M = this.matrixMultiply(this.M, this.M);
+
+                // Extract features
+                const [[a, b, c], [d, e, f], [g, h, i]] = this.M;
+
+                // Calculate determinant 
+                const detRaw = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g);
+                let det = detRaw % this.n;
+                if (det < BigInt(0)) det += this.n;
+
+                // Calculate trace
+                const trace = (a + e + i) % this.n;
+
+                // Calculate row sum and column sum
+                const rowSum = (a + b + c) % this.n;
+                const colSum = (a + d + g) % this.n;
+
+                // Mix values and extract 8-bit output (simple XOR mix)
+                // Use the least significant 32 bits for the Number conversion
+                const mixed = Number(trace ^ det ^ rowSum ^ colSum) & 0xFFFFFFFF;
+                const value = mixed & 0xFF;
+                
+                return {
+                    decimal: value,
+                    binary: value.toString(2).padStart(8, '0'),
+                    hex: '0x' + value.toString(16).toUpperCase().padStart(2, '0')
+                };
+            }
+
+            generateSequence(length) {
+                const sequence = [];
+                for (let i = 0; i < length; i++) {
+                    sequence.push(this.next());
+                }
+                return sequence;
+            }
+        }
+
+        // Statistical Analysis
+        function calculateStats(sequence) {
+            const values = sequence.map(item => item.decimal);
+            const binaries = sequence.map(item => item.binary);
+            
+            // Basic statistics
+            const mean = values.reduce((a, b) => a + b) / values.length;
+            const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / values.length;
+            const stdDev = Math.sqrt(variance);
+            
+            // Frequency analysis
+            const bitCounts = { '0': 0, '1': 0 };
+            binaries.join('').split('').forEach(bit => bitCounts[bit]++);
+            const totalBits = binaries.length * 8;
+            const zeroFreq = bitCounts['0'] / totalBits;
+            const oneFreq = bitCounts['1'] / totalBits;
+            
+            // Chi-square test for uniformity
+            const histogram = new Array(256).fill(0);
+            values.forEach(val => histogram[val]++);
+            const expected = values.length / 256;
+            const chiSquare = histogram.reduce((sum, observed) => 
+                sum + Math.pow(observed - expected, 2) / expected, 0);
+            
+            // Runs test
+            const binaryString = binaries.join('');
+            let runs = 1;
+            for (let i = 1; i < binaryString.length; i++) {
+                if (binaryString[i] !== binaryString[i-1]) runs++;
+            }
+            
+            // Entropy estimation
+            const counts = new Array(256).fill(0);
+            values.forEach(v => counts[v]++);
+            let entropy = 0;
+            for (let count of counts) {
+                if (count > 0) {
+                    const p = count / values.length;
+                    entropy -= p * Math.log2(p);
+                }
+            }
+            
+            return {
+                mean: mean.toFixed(2),
+                variance: variance.toFixed(2),
+                stdDev: stdDev.toFixed(2),
+                zeroFreq: (zeroFreq * 100).toFixed(2) + '%',
+                oneFreq: (oneFreq * 100).toFixed(2) + '%',
+                chiSquare: chiSquare.toFixed(2),
+                runs: runs,
+                entropy: entropy.toFixed(2),
+                histogram: histogram,
+                min: Math.min(...values),
+                max: Math.max(...values)
+            };
+        }
+
+        function displaySequence(sequence, elementId, algorithmName) {
+            const output = document.getElementById(elementId);
+            let html = `<div style="color: #00ffff; font-weight: bold; margin-bottom: 15px;">=== ${algorithmName} Sample Output ===</div>`;
+            
+            const displayCount = Math.min(sequence.length, 20);
+            sequence.slice(0, displayCount).forEach((item, i) => {
+                html += `<div style="margin-bottom: 8px;">`;
+                html += `<span style="color: #ffff00;">Sample ${i + 1}:</span><br>`;
+                html += `  Binary : <span style="color: #00ff00;">${item.binary}</span><br>`;
+                html += `  Decimal: <span style="color: #00ff00;">${item.decimal}</span><br>`;
+                html += `  Hex    : <span style="color: #00ff00;">${item.hex}</span><br>`;
+                html += `<span style="color: #666;">` + '-'.repeat(30) + `</span>`;
+                html += `</div>`;
+            });
+            
+            if (sequence.length > displayCount) {
+                html += `<div style="color: #ffff00; text-align: center; margin-top: 15px;">... and ${sequence.length - displayCount} more values</div>`;
+            }
+            
+            output.innerHTML = html;
+        }
+
+        function displayStats(stats, elementId) {
+            const statsElement = document.getElementById(elementId);
+            statsElement.innerHTML = `
+                <div class="stats-row"><span class="stat-label">Mean:</span><span class="stat-value">${stats.mean}</span></div>
+                <div class="stats-row"><span class="stat-label">Std Deviation:</span><span class="stat-value">${stats.stdDev}</span></div>
+                <div class="stats-row"><span class="stat-label">Entropy:</span><span class="stat-value">${stats.entropy} bits</span></div>
+                <div class="stats-row"><span class="stat-label">Zero Frequency:</span><span class="stat-value">${stats.zeroFreq}</span></div>
+                <div class="stats-row"><span class="stat-label">One Frequency:</span><span class="stat-value">${stats.oneFreq}</span></div>
+                <div class="stats-row"><span class="stat-label">Chi-Square:</span><span class="stat-value">${stats.chiSquare}</span></div>
+                <div class="stats-row"><span class="stat-label">Runs:</span><span class="stat-value">${stats.runs}</span></div>
+                <div class="stats-row"><span class="stat-label">Range:</span><span class="stat-value">${stats.min} - ${stats.max}</span></div>
+            `;
+        }
+
+        function generateComparisonTable() {
+            const tbody = document.getElementById('stats-table-body');
+            
+            const metrics = [
+                { name: 'Mean', lfsr: lfsrStats.mean, bbs: bbsStats.mean, ideal: '127.5', better: 'closer to 127.5' },
+                { name: 'Std Deviation', lfsr: lfsrStats.stdDev, bbs: bbsStats.stdDev, ideal: '~73.9', better: 'closer to 73.9' },
+                { name: 'Entropy (bits)', lfsr: lfsrStats.entropy, bbs: bbsStats.entropy, ideal: '8.0', better: 'higher' },
+                { name: 'Zero Frequency', lfsr: lfsrStats.zeroFreq, bbs: bbsStats.zeroFreq, ideal: '50%', better: 'closer to 50%' },
+                { name: 'One Frequency', lfsr: lfsrStats.oneFreq, bbs: bbsStats.oneFreq, ideal: '50%', better: 'closer to 50%' },
+                { name: 'Chi-Square', lfsr: lfsrStats.chiSquare, bbs: bbsStats.chiSquare, ideal: '~255', better: 'closer to 255' },
+                { name: 'Runs', lfsr: lfsrStats.runs, bbs: bbsStats.runs, ideal: 'higher', better: 'higher' },
+                { name: 'Generation Time', lfsr: lfsrStats.generationTime + 'ms', bbs: bbsStats.generationTime + 'ms', ideal: 'lower', better: 'faster' }
+            ];
+
+            tbody.innerHTML = metrics.map(metric => {
+                let winner = 'Tie';
+                const lfsrVal = parseFloat(metric.lfsr);
+                const bbsVal = parseFloat(metric.bbs);
+                
+                if (!isNaN(lfsrVal) && !isNaN(bbsVal)) {
+                    if (metric.name === 'Mean') {
+                        winner = Math.abs(lfsrVal - 127.5) < Math.abs(bbsVal - 127.5) ? 'LFSR' : 'BBS';
+                    } else if (metric.name === 'Entropy (bits)' || metric.name === 'Runs') {
+                        winner = lfsrVal > bbsVal ? 'LFSR' : 'BBS';
+                    } else if (metric.name === 'Generation Time') {
+                        winner = lfsrVal < bbsVal ? 'LFSR' : 'BBS';
+                    } else if (metric.name === 'Chi-Square') {
+                        winner = Math.abs(lfsrVal - 255) < Math.abs(bbsVal - 255) ? 'LFSR' : 'BBS';
+                    }
+                }
+                // Special case for frequencies
+                if (metric.name.includes('Frequency')) {
+                     const lfsrPercent = parseFloat(metric.lfsr);
+                     const bbsPercent = parseFloat(metric.bbs);
+                     winner = Math.abs(lfsrPercent - 50) < Math.abs(bbsPercent - 50) ? 'LFSR' : 'BBS';
+                }
+
+                return `
+                    <tr style="border-bottom: 1px solid #dee2e6;">
+                        <td style="padding: 12px; font-weight: 600;">${metric.name}</td>
+                        <td style="padding: 12px; ${winner === 'LFSR' ? 'background: #d4edda; color: #155724;' : ''}">${metric.lfsr}</td>
+                        <td style="padding: 12px; ${winner === 'BBS' ? 'background: #d4edda; color: #155724;' : ''}">${metric.bbs}</td>
+                        <td style="padding: 12px; color: #667eea; font-weight: 600;">${winner === 'Tie' ? 'Similar' : winner}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function generateComparison() {
+            console.log('Generate button clicked!');
+            
+            const progressBar = document.getElementById('progress-bar');
+            const progressFill = document.getElementById('progress-fill');
+            
+            progressBar.style.display = 'block';
+            progressFill.style.width = '10%';
+
+            try {
+                // Get parameters
+                const lfsrLength = parseInt(document.getElementById('lfsr-length').value);
+                const lfsrSeed = parseInt(document.getElementById('lfsr-seed').value);
+                const lfsrTaps = document.getElementById('lfsr-taps').value.split(',').map(x => parseInt(x.trim()));
+                
+                const bbsBits = parseInt(document.getElementById('bbs-bits').value);
+                const bbsSeed = parseInt(document.getElementById('bbs-seed').value);
+                
+                const sampleSize = parseInt(document.getElementById('sample-size').value);
+
+                progressFill.style.width = '25%';
+                await sleep(100);
+
+                // Generate LFSR sequence
+                const lfsr = new LFSR(lfsrLength, lfsrSeed, lfsrTaps);
+                const startLFSR = performance.now();
+                lfsrSequence = lfsr.generateSequence(sampleSize);
+                const endLFSR = performance.now();
+                
+                progressFill.style.width = '50%';
+                await sleep(100);
+
+                // Generate BBS sequence
+                const bbs = new ModifiedBBS3x3(bbsBits, bbsSeed); 
+                const startBBS = performance.now();
+                bbsSequence = bbs.generateSequence(sampleSize);
+                const endBBS = performance.now();
+
+                progressFill.style.width = '75%';
+                await sleep(100);
+
+                // Calculate statistics
+                lfsrStats = calculateStats(lfsrSequence);
+                lfsrStats.generationTime = (endLFSR - startLFSR).toFixed(2);
+                
+                bbsStats = calculateStats(bbsSequence);
+                bbsStats.generationTime = (endBBS - startBBS).toFixed(2);
+
+                progressFill.style.width = '90%';
+                await sleep(100);
+
+                // Display results
+                displaySequence(lfsrSequence, 'lfsr-output', 'LFSR');
+                displaySequence(bbsSequence, 'bbs-output', 'Modified BBS 3x3');
+                
+                displayStats(lfsrStats, 'lfsr-stats');
+                displayStats(bbsStats, 'bbs-stats');
+
+                generateComparisonTable();
+
+                // Show results and analysis
+                document.getElementById('results-grid').style.display = 'grid';
+                document.getElementById('analysis-section').style.display = 'block';
+
+                progressFill.style.width = '100%';
+                await sleep(500);
+                progressBar.style.display = 'none';
+
+                console.log('Generation complete!');
+
+            } catch (error) {
+                console.error('Error during generation:', error);
+                alert('Error generating sequences: ' + error.message);
+                progressBar.style.display = 'none';
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results-grid').style.display = 'none';
+            document.getElementById('analysis-section').style.display = 'none';
+            document.getElementById('progress-bar').style.display = 'none';
+            
+            // Clear display panels
+            document.getElementById('lfsr-output').innerHTML = '';
+            document.getElementById('bbs-output').innerHTML = '';
+            document.getElementById('lfsr-stats').innerHTML = '';
+            document.getElementById('bbs-stats').innerHTML = '';
+            document.getElementById('stats-table-body').innerHTML = '';
+            
+            lfsrSequence = [];
+            bbsSequence = [];
+            lfsrStats = {};
+            bbsStats = {};
+            
+            console.log('Results cleared');
+        }
+
+        function exportResults() {
+            if (lfsrSequence.length === 0 || bbsSequence.length === 0) {
+                alert('Please generate sequences first.');
+                return;
+            }
+
+            const lfsrData = lfsrSequence.map(item => item.decimal).join('\n');
+            const bbsData = bbsSequence.map(item => item.decimal).join('\n');
+            
+            const statsData = [
+                ['Metric', 'LFSR', 'Modified BBS'],
+                ['Mean', lfsrStats.mean, bbsStats.mean],
+                ['Std Deviation', lfsrStats.stdDev, bbsStats.stdDev],
+                ['Entropy (bits)', lfsrStats.entropy, bbsStats.entropy],
+                ['Zero Frequency', lfsrStats.zeroFreq, bbsStats.zeroFreq],
+                ['One Frequency', lfsrStats.oneFreq, bbsStats.oneFreq],
+                ['Chi-Square', lfsrStats.chiSquare, bbsStats.chiSquare],
+                ['Runs', lfsrStats.runs, bbsStats.runs],
+                ['Generation Time (ms)', lfsrStats.generationTime, bbsStats.generationTime]
+            ].map(e => e.join(',')).join('\n');
+
+            const csvContent = `LFSR Sequence:\n${lfsrData}\n\nModified BBS Sequence:\n${bbsData}\n\nStatistical Comparison:\n${statsData}`;
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) { 
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'prng_comparison_results.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } else {
+                alert('Your browser does not support automatic file downloads. Please copy the data manually.');
+            }
+        }
+    </script>
+</body>
+</html>
