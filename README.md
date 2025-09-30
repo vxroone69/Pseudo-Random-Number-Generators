@@ -4,7 +4,15 @@
 This project implements and compares different Pseudo-Random Number Generators (PRNGs) based on their statistical and performance characteristics. The tool evaluates key metrics such as mean, standard deviation, chi-square, and entropy. The comparison helps in identifying which PRNGs are more suitable for simulations, cryptography, and other applications where randomness quality is crucial.
 
 <p align="center">
+  <img src="init inputs.png" alt="PRNG Comparison Results" width="600">
+</p>
+
+<p align="center">
   <img src="outputs.png" alt="PRNG Comparison Results" width="600">
+</p>
+
+<p align="center">
+  <img src="stats.png" alt="PRNG Comparison Results" width="600">
 </p>
 
 ## Features
